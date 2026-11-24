@@ -223,6 +223,12 @@ ol.track .sl{font-size:11px;font-weight:600;line-height:.75rem}
 .toast{position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:.65rem 1.1rem;border-radius:999px;z-index:99;display:none;max-width:92vw;text-align:center;font-weight:700;font-size:.9rem;box-shadow:0 4px 18px rgba(0,0,0,.25)}
 main.viewmain{max-width:64rem;margin:0 auto;padding:1rem 1rem calc(3rem + env(safe-area-inset-bottom,0px))}
 input,textarea{-webkit-user-select:text;user-select:text}
+/* ── Global Back button (shown on every page except Home with no history) ── */
+.backbar{position:sticky;top:0;z-index:30;background:var(--bg);max-width:64rem;margin:0 auto;padding:.6rem 1rem .1rem}
+.backbar[hidden]{display:none}
+.backbar .gback{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border);border-radius:999px;background:var(--sand);color:var(--text);padding:.5rem 1rem;font-size:.95rem;font-weight:700;min-height:2.5rem}
+main.viewmain .backbtn{display:none}
+.side-back{display:flex;align-items:center;gap:.5rem;width:100%;margin:.25rem 0 .1rem;border:1px solid var(--border);border-radius:.65rem;background:var(--sand);color:var(--text);padding:.55rem .7rem;font-size:.95rem;font-weight:800}
 /* ── Auto-disappearing sidebar ── */
 .menu-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:2.5rem;height:2.5rem;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:.6rem}
 .menu-btn svg{width:1.35rem;height:1.35rem}
@@ -530,6 +536,7 @@ select.inp{appearance:auto}
   <aside class="app-sidebar" id="appSidebar" aria-hidden="true" aria-label="Menu">
     <div id="sidebarContent"></div>
   </aside>
+  <div class="backbar" id="backBar" hidden></div>
   <main class="viewmain" id="viewMain"></main>
 </div>
 
@@ -798,6 +805,7 @@ var lang = detectLanguage();
 var profile = null; /* {name, piUsername, language, country, governorate, interests[]} */
 var piAuth = null; /* {username, walletAddress, sdk, serverVerified, simulated} — set by Pi.authenticate (SDK only), cleared on sign out */
 var view = {name:"home"};
+var viewStack = [];
 var orders = []; var nextOrderId = 1;
 var disputes = []; var nextDisputeId = 1;
 var dispFormState = {}; /* per-order dispute form: {open, reason, ev} — survives the 30s orders re-render so an open form and its typed text are never wiped */
@@ -1252,11 +1260,12 @@ function renderSidebar(){
     + "<div class=\"panel-actions\"><a class=\"obtn obtn-ok\" style=\"text-decoration:none\" href=\"mailto:support@jiro.app?subject="+encodeURIComponent("Jiro support — @"+(profile.piUsername||""))+"\">"+esc(t("contactEmailBtn"))+"</a>"
     + gotoBtn("contact", t("viewAll")) + "</div>";
 
+  var backItem = canGoBack() ? "<button type=\"button\" class=\"side-back\" id=\"sideBack\">"+(document.documentElement.getAttribute("dir")==="rtl"?"→":"←")+" "+esc(t("back"))+"</button>" : "";
   var h="<div class=\"side-head\"><div class=\"av\">"+esc(initial)+"</div><div class=\"who\">"
     + "<p class=\"n\">"+esc(profile.name||profile.piUsername)+"</p>"
     + "<p class=\"s\">"+esc(t(roleKey))+" · π @"+esc(profile.piUsername)+"<br/>"+esc(profile.governorate)+", "+esc(profile.country)+"</p></div>"
     + "<button type=\"button\" class=\"side-close\" id=\"sideClose\" aria-label=\"×\">×</button></div>"
-    + "<div class=\"side-body\"><p class=\"side-autonote\">"+esc(t("sbAutoNote"))+"</p>"
+    + "<div class=\"side-body\">"+backItem+"<p class=\"side-autonote\">"+esc(t("sbAutoNote"))+"</p>"
     + accHead("profile", ICONS.user, t("sbProfile"), "") + accPanel("profile", profilePanel)
     + accHead("preferences", ICONS.sliders, t("sbPreferences"), "") + accPanel("preferences", prefPanel)
     + accHead("cart", ICONS.cart, t("sbCart"), cartCount()||"") + accPanel("cart", cartPanel)
@@ -1280,6 +1289,7 @@ function renderSidebar(){
 
   /* — Wiring — */
   box.querySelector("#sideClose").addEventListener("click", closeSidebar);
+  var sbk=box.querySelector("#sideBack"); if(sbk) sbk.addEventListener("click", goBack);
   box.querySelectorAll("[data-acc]").forEach(function(b){ b.addEventListener("click", function(){
     var k=b.getAttribute("data-acc"); sideOpen[k]=!sideOpen[k]; renderSidebar(); scheduleSidebarHide(7000);
   }); });
@@ -1520,6 +1530,8 @@ function signOut(){
      the authenticated Pi identity and profile are cleared and the app
      returns to the first screen, where Sign in with Pi runs again. */
   if(typeof closeSidebar==="function") closeSidebar();
+  viewStack = []; view = {name:"home"};
+  var bb=document.getElementById("backBar"); if(bb){ bb.hidden=true; bb.innerHTML=""; }
   if(profile){
     logEvent(profile.role==="admin" ? "admin" : (profile.piUsername||profile.name), "signout", "");
     if(profile.role==="admin" && adminSessionStart){ attendance.push({staffId:0, loginAt:adminSessionStart, logoutAt:Date.now()}); adminSessionStart=null; }
@@ -1592,7 +1604,26 @@ function renderNav(){
     nav.appendChild(b);
   });
 }
-function setView(v){
+/* ── Navigation history for the Back button ── */
+function sameView(a,b){ return !!a && !!b && a.name===b.name && a.id===b.id && a.listingId===b.listingId; }
+function canGoBack(){ return viewStack.length>0 || (view && view.name!=="home"); }
+function goBack(){
+  if(sidebarOpen) closeSidebar();
+  var prev = viewStack.pop();
+  if(prev) setView(prev, {back:true});
+  else if(view && view.name!=="home") setView({name:"home"}, {back:true});
+}
+function updateBackBar(){
+  var bar=document.getElementById("backBar"); if(!bar) return;
+  if(!profile || !canGoBack()){ bar.hidden=true; bar.innerHTML=""; return; }
+  var arrow = document.documentElement.getAttribute("dir")==="rtl" ? "→" : "←";
+  bar.hidden=false;
+  bar.innerHTML="<button type=\"button\" class=\"gback\" id=\"gBack\">"+arrow+" "+esc(t("back"))+"</button>";
+  bar.querySelector("#gBack").addEventListener("click", goBack);
+}
+function setView(v, opts){
+  opts = opts || {};
+  if(!opts.back && view && !sameView(view, v)){ viewStack.push(view); if(viewStack.length>30) viewStack.shift(); }
   if(monitorTimer){ clearInterval(monitorTimer); monitorTimer=null; }
   /* jiro-2 mounts each view fresh: product checkout state and chat selection reset per visit */
   if(v.name==="product"){ prodState={shipping:appShippingFor(null,"shipping"), tax:0, insFee:0, phases:[], paying:false, paid:false, payError:""}; if(v.id) recordHistory(v.id); }
@@ -1622,6 +1653,7 @@ function renderView(){
   else if(view.name==="help") renderHelp(m);
   else if(view.name==="guide") renderGuide(m);
   else if(view.name==="contact") renderContact(m);
+  updateBackBar();
 }
 
 /* ================= HOME ================= */
