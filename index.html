@@ -228,7 +228,8 @@ input,textarea{-webkit-user-select:text;user-select:text}
 .menu-btn svg{width:1.35rem;height:1.35rem}
 .side-overlay{position:fixed;inset:0;background:rgba(10,16,30,.45);z-index:38;opacity:0;pointer-events:none;transition:opacity .25s ease}
 .side-overlay.show{opacity:1;pointer-events:auto}
-.app-sidebar{position:fixed;top:0;bottom:0;inset-inline-start:0;width:min(21rem,88vw);background:var(--surface);color:var(--text);z-index:40;box-shadow:0 0 40px rgba(0,0,0,.28);transform:translateX(-108%);transition:transform .28s ease;display:flex;flex-direction:column;outline:1px solid var(--border)}
+#sidebarContent{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.app-sidebar{position:fixed;top:0;bottom:0;height:100vh;height:100dvh;max-height:100dvh;inset-inline-start:0;width:min(21rem,88vw);overflow:hidden;background:var(--surface);color:var(--text);z-index:40;box-shadow:0 0 40px rgba(0,0,0,.28);transform:translateX(-108%);transition:transform .28s ease;display:flex;flex-direction:column;outline:1px solid var(--border)}
 html[dir="rtl"] .app-sidebar{transform:translateX(108%)}
 .app-sidebar.open{transform:translateX(0)!important}
 .side-head{display:flex;align-items:flex-start;gap:.75rem;padding:1rem;border-bottom:1px solid var(--border)}
@@ -237,7 +238,7 @@ html[dir="rtl"] .app-sidebar{transform:translateX(108%)}
 .side-head .who .n{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .side-head .who .s{font-size:.75rem;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .side-close{flex:none;border:1px solid var(--border);background:var(--sand);color:var(--text);border-radius:.5rem;width:2.25rem;height:2.25rem;font-size:1.1rem;line-height:1}
-.side-body{flex:1;overflow-y:auto;padding:.5rem .75rem 1rem}
+.side-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:.5rem .75rem calc(8rem + env(safe-area-inset-bottom,0px))}
 .side-autonote{font-size:.7rem;color:var(--dim);padding:.35rem .5rem 0}
 .side-item{display:flex;align-items:center;gap:.65rem;width:100%;border:0;background:transparent;color:var(--text);border-radius:.65rem;padding:.6rem .5rem;font-size:.95rem;font-weight:700;text-align:start}
 .side-item:hover,.side-item.on{background:var(--sand)}
@@ -1026,10 +1027,16 @@ function cardActionsHTML(l, cls){
     + "</div>";
 }
 /* ================= AUTO-DISAPPEARING SIDEBAR ================= */
+/* True while the user is editing a form inside the sidebar (Profile etc.) — never auto-close then */
+function sidebarBusy(){
+  var sb=document.getElementById("appSidebar"), a=document.activeElement;
+  if(sb && a && sb.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+  return !!(sideOpen && (sideOpen.profile || sideOpen.preferences || sideOpen.contact));
+}
 function scheduleSidebarHide(ms){
   clearTimeout(sidebarTimer);
-  if(!sidebarOpen) return;
-  sidebarTimer=setTimeout(function(){ closeSidebar(); }, ms||4500);
+  if(!sidebarOpen || sidebarBusy()) return;
+  sidebarTimer=setTimeout(function(){ if(sidebarBusy()) return; closeSidebar(); }, ms||4500);
 }
 function openSidebar(){
   sidebarOpen=true;
@@ -1037,6 +1044,7 @@ function openSidebar(){
   document.getElementById("appSidebar").classList.add("open");
   document.getElementById("appSidebar").setAttribute("aria-hidden","false");
   document.getElementById("sideOverlay").classList.add("show");
+  document.body.style.overflow="hidden";
   var b=document.getElementById("btnMenu"); if(b) b.setAttribute("aria-expanded","true");
   scheduleSidebarHide(4500);
 }
@@ -1045,6 +1053,7 @@ function closeSidebar(){
   clearTimeout(sidebarTimer);
   var sb=document.getElementById("appSidebar"); if(sb){ sb.classList.remove("open"); sb.setAttribute("aria-hidden","true"); }
   var ov=document.getElementById("sideOverlay"); if(ov) ov.classList.remove("show");
+  document.body.style.overflow="";
   var b=document.getElementById("btnMenu"); if(b) b.setAttribute("aria-expanded","false");
 }
 /* ================= ACCORDION SIDEBAR — every item expands / collapses in place ================= */
@@ -1319,6 +1328,10 @@ function renderSidebar(){
   sb.onmouseenter=function(){ clearTimeout(sidebarTimer); };
   sb.onmouseleave=function(){ scheduleSidebarHide(1400); };
   sb.onpointerdown=function(){ scheduleSidebarHide(6000); };
+  sb.onfocusin=function(){ clearTimeout(sidebarTimer); };
+  sb.onfocusout=function(){ setTimeout(function(){ scheduleSidebarHide(8000); }, 300); };
+  var sbody=sb.querySelector(".side-body");
+  if(sbody) sbody.onscroll=function(){ if(sidebarBusy()) clearTimeout(sidebarTimer); else scheduleSidebarHide(6000); };
 }
 var CAT_IMG = {electronics:"headphones",fashion:"hoodie",computers:"laptop",home:"airfryer",kindle:"ereader",audible:"audioplayer",phones:"smartphone",office:"printer",tvs:"smarttv","women-fashion":"dress","men-fashion":"shoes","kids-fashion":"kidsjacket",beauty:"perfume",supermarket:"oliveoil",furniture:"sofa",kitchen:"washer2",toys:"rideon",sports:"dumbbells",books:"books",games:"controller",car:"carvacuum"};
 function listingImage(l){ if(l.imageUrl) return l.imageUrl; if(l.imageAsset && IMG[l.imageAsset]) return IMG[l.imageAsset]; var ck=CAT_IMG[l.category]; if(ck && IMG[ck]) return IMG[ck]; return IMG.headphones; }
