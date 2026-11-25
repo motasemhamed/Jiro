@@ -3653,11 +3653,18 @@ renderNav = function(){
    of the listing photo) matched no keyword and fell back to a
    pseudo-random category — the item actually on sale was filtered out
    and the search came back empty. Now the photo's pixels are compared
-   with every listing photo: an 8×8 average-hash plus the average colour,
+   with every listing photo: a 16×16 average-hash plus the average colour,
    computed in the browser with canvas. An identical photo scores ~0, so
-   the exact listing always ranks first. */
+   the exact listing always ranks first. The 8×8 hash was measured on the
+   real listing photos and could not tell them apart (unrelated photos
+   differed by as little as 3 of 64 bits, so the old ham<=20 filter let
+   ~11 unrelated items through per search). At 16×16 the same photo
+   re-encoded differs by at most 1 of 256 bits, while the closest
+   different listing photo differs by at least 24 — so only listings
+   within 12 differing bits are shown, and anything else honestly
+   reports no match instead of showing unrelated items. */
 function imgFingerprint(img){
-  var S=8, cv=document.createElement("canvas"); cv.width=S; cv.height=S;
+  var S=16, cv=document.createElement("canvas"); cv.width=S; cv.height=S;
   var cx=cv.getContext("2d"); if(!cx) return null;
   cx.drawImage(img,0,0,S,S);
   var d; try{ d=cx.getImageData(0,0,S,S).data; }catch(e){ return null; }
@@ -3692,12 +3699,12 @@ function imageSearchByPhoto(file, m){
   im.onload=function(){
     var target=imgFingerprint(im);
     URL.revokeObjectURL(objUrl);
-    if(!target){ imageSearchByName(file, m); return; }
+    if(!target){ homeState.imgMatchIds=null; toast(t("xImageNoMatch")); renderHome(m); return; }
     Promise.all(listings.map(function(l){
       return listingFingerprint(l).then(function(fp){ return fp ? {id:l.id, s:imgScore(target, fp)} : null; });
     })).then(function(rows){
       rows=rows.filter(Boolean).sort(function(a,b){ return a.s.score-b.s.score; });
-      var close=rows.filter(function(r){ return r.s.ham<=20; }).slice(0,8);
+      var close=rows.filter(function(r){ return r.s.ham<=12; }).slice(0,8);
       if(close.length){
         homeState.imgMatchIds=close.map(function(r){ return r.id; });
         homeState.category=""; homeState.search="";
@@ -3707,20 +3714,10 @@ function imageSearchByPhoto(file, m){
         toast(t("xImageNoMatch"));
       }
       renderHome(m);
-    }).catch(function(){ imageSearchByName(file, m); });
+    }).catch(function(){ homeState.imgMatchIds=null; toast(t("xImageNoMatch")); renderHome(m); });
   };
-  im.onerror=function(){ URL.revokeObjectURL(objUrl); imageSearchByName(file, m); };
+  im.onerror=function(){ URL.revokeObjectURL(objUrl); homeState.imgMatchIds=null; toast(t("xImageNoMatch")); renderHome(m); };
   im.src=objUrl;
-}
-function imageSearchByName(file, m){
-  var name=(file.name||"").toLowerCase();
-  var kw=[["phone|iphone|samsung|mobile","phones"],["laptop|macbook|pc|computer","computers"],["tv|television","tvs"],["headphone|earbud|speaker|audio","electronics"],["sofa|chair|table|furniture","furniture"],["shoe|sneaker","men-fashion"],["dress|bag|fashion","women-fashion"],["watch|perfume","beauty"],["book|kindle","books"],["car","car"],["wash|kitchen|fridge","kitchen"],["toy|bike","toys"],["game|controller|console","games"]];
-  var cat="";
-  for(var i=0;i<kw.length;i++){ if(new RegExp(kw[i][0]).test(name)){ cat=kw[i][1]; break; } }
-  if(cat){ homeState.category=cat; homeState.search=""; }
-  else { var cats=CATEGORIES.filter(function(c){ return listings.some(function(l){ return l.category===c; }); }); homeState.category=cats[nameHash(name)%cats.length]; homeState.search=""; }
-  toast(t("xImageSearchDone"));
-  renderHome(m);
 }
 /* While photo results are on screen, the text / category / condition
    filters are bypassed so a matched listing can never be hidden by the
