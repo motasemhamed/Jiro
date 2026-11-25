@@ -474,12 +474,6 @@ select.inp{appearance:auto}
         <p class="hint" data-i18n="staticNoServerNote" style="margin-top:.6rem;border:1px solid var(--border);border-inline-start:3px solid var(--accent);background:var(--surface);border-radius:8px;padding:.55rem .7rem;text-align:start">Note: this static public build signs you in through the Pi SDK only — it cannot verify your Pi identity with a server. Real server-side Pi verification is available in the full version (jiro-2).</p>
       </div>
 
-      <fieldset id="obInterestsBlock">
-        <legend data-i18n="interestsTitle">What are you interested in?</legend>
-        <p class="hint" data-i18n="interestsHint">Pick your interests so listings and ads are targeted to what you actually want.</p>
-        <div class="chips" id="obInterests"></div>
-      </fieldset>
-
       <div class="grid2" id="obCountryBlock">
         <div>
           <label class="fl" for="ob-country" data-i18n="country">Country</label>
@@ -1507,7 +1501,6 @@ function applyLang(code){
   document.getElementById("lang-switch").value = code;
   refreshPassToggleLabels();
   renderPiAuthStatus();
-  renderObInterests();
   renderObRoleUI();
   if(profile){ renderHeader(); renderNav(); renderSidebar(); renderView(); }
 }
@@ -1537,29 +1530,13 @@ function renderObRoleUI(){
     if(on) b.classList.add("on"); else b.classList.remove("on");
     b.setAttribute("aria-pressed", on?"true":"false");
   });
-  /* Interests are a buyer choice; country/city apply to buyers and sellers. */
-  var ib=document.getElementById("obInterestsBlock"); if(ib) ib.style.display = obRole==="buyer" ? "" : "none";
+  /* Interests are set later from the sidebar menu; country/city apply to buyers and sellers. */
   var cb=document.getElementById("obCountryBlock"); if(cb) cb.style.display = obRole==="admin" ? "none" : "";
   var cont=document.getElementById("obContinue"); if(cont) cont.textContent = t("continueBtn");
 }
 document.querySelectorAll("#obRoles .rolecard").forEach(function(b){
   b.addEventListener("click", function(){ obRole=b.getAttribute("data-role"); renderObRoleUI(); });
 });
-var obInterests = [];
-function renderObInterests(){
-  var box=document.getElementById("obInterests"); if(!box) return; box.innerHTML="";
-  CATEGORIES.forEach(function(c){
-    var on = obInterests.indexOf(c)>=0;
-    var b=document.createElement("button"); b.type="button"; b.className="chip"+(on?" on":""); b.textContent=catName(c);
-    b.setAttribute("aria-pressed", on?"true":"false");
-    b.addEventListener("click", function(){
-      var i=obInterests.indexOf(c);
-      if(i>=0) obInterests.splice(i,1); else obInterests.push(c);
-      renderObInterests();
-    });
-    box.appendChild(b);
-  });
-}
 function fillGovSelects(){
   var sel=document.getElementById("ob-gov"); sel.innerHTML="";
   GOVERNORATES.forEach(function(g){ var o=document.createElement("option"); o.value=g; o.textContent=g; sel.appendChild(o); });
@@ -1636,7 +1613,7 @@ document.getElementById("obForm").addEventListener("submit", function(e){
     enterApp("admin");
     return;
   }
-  profile = {name:piAuth.username, piUsername:piAuth.username, role:obRole, language:lang, country:document.getElementById("ob-country").value.trim()||"Egypt", governorate:document.getElementById("ob-gov").value, interests: obRole==="buyer" ? obInterests.slice() : [], authMethod:"pi"};
+  profile = {name:piAuth.username, piUsername:piAuth.username, role:obRole, language:lang, country:document.getElementById("ob-country").value.trim()||"Egypt", governorate:document.getElementById("ob-gov").value, interests: [], authMethod:"pi"};
   enterApp(obRole==="seller" ? "sell" : "home");
 });
 
