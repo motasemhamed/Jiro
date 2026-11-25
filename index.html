@@ -468,6 +468,7 @@ select.inp{appearance:auto}
       <div id="obPiBlock">
         <button type="button" class="btn btn-navy" id="btnPiSignIn">π · <span data-i18n="signIn">Sign in with Pi</span></button>
         <p class="hint" data-i18n="piOnlyHint" style="margin-top:.4rem">Sign-in is Pi-only: Pi Network verifies your identity inside Pi Browser. Jiro has no passwords and no separate registration — after signing in, pick your role, interests and city, then tap Continue.</p>
+        <p class="hint" style="margin-top:.4rem;text-align:center">App build 25 Nov 2026 · image-search v2</p>
         <p class="okmsg" id="piAuthStatus" role="status" style="display:none;margin-top:.5rem"></p>
         <p class="hint" data-i18n="staticNoServerNote" style="margin-top:.6rem;border:1px solid var(--border);border-inline-start:3px solid var(--accent);background:var(--surface);border-radius:8px;padding:.55rem .7rem;text-align:start">Note: this static public build signs you in through the Pi SDK only — it cannot verify your Pi identity with a server. Real server-side Pi verification is available in the full version (jiro-2).</p>
       </div>
@@ -3747,7 +3748,7 @@ renderHome = function(m){
     + "<div style=\"display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.55rem\">"
     + "<button type=\"button\" class=\"obtn obtn-sand\" id=\"ss-save\">"+esc(t("xSaveSearch"))+"</button>"
     + "<label class=\"obtn obtn-sand\" style=\"cursor:pointer\">🖼 "+esc(t("xSearchByImage"))+"<input id=\"ss-img\" type=\"file\" accept=\"image/*\" style=\"display:none\"/></label></div>"
-    + (homeState.imgMatchIds && homeState.imgMatchIds.length ? "<div style=\"margin-top:.6rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap\"><span class=\"chip on\">🖼 "+esc(t("xImageResults"))+" ("+homeState.imgMatchIds.length+")</span><button type=\"button\" class=\"mini-btn\" id=\"ss-img-clear\">"+esc(t("xImageClear"))+"</button></div>" : "")
+    + (homeState.imgMatchIds && homeState.imgMatchIds.length ? "<div style=\"margin-top:.6rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap\"><span class=\"chip on\">🖼 "+esc(t("xImageResults"))+" ("+homeState.imgMatchIds.length+") · v2</span><button type=\"button\" class=\"mini-btn\" id=\"ss-img-clear\">"+esc(t("xImageClear"))+"</button></div>" : "")
     + (savedSearches.length ? "<div style=\"margin-top:.6rem;display:flex;flex-direction:column;gap:.45rem\">"+savedSearches.map(function(s){
         return "<div class=\"mini-row\"><div class=\"mi\"><p class=\"mt2\">"+esc(s.q||catName(s.category||"")||t("xSavedSearches"))+"</p><p class=\"mp\">"+esc(t(s.condition))+(s.gov ? " · "+esc(s.gov) : "")+" · "+new Date(s.at).toLocaleDateString()+"</p></div>"
           + "<button type=\"button\" class=\"mini-btn\" data-ss-apply=\""+s.id+"\">"+esc(t("xApplySearch"))+"</button>"
