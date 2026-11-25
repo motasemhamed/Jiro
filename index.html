@@ -228,7 +228,7 @@ input,textarea{-webkit-user-select:text;user-select:text}
 .menu-btn svg{width:1.35rem;height:1.35rem}
 .side-overlay{position:fixed;inset:0;background:rgba(10,16,30,.45);z-index:38;opacity:0;pointer-events:none;transition:opacity .25s ease}
 .side-overlay.show{opacity:1;pointer-events:auto}
-.app-sidebar{position:fixed;top:0;bottom:0;inset-inline-start:0;width:min(21rem,88vw);background:var(--surface);color:var(--text);z-index:40;box-shadow:0 0 40px rgba(0,0,0,.28);transform:translateX(-108%);transition:transform .28s ease;display:flex;flex-direction:column;outline:1px solid var(--border)}
+.app-sidebar{position:fixed;top:0;bottom:0;inset-inline-start:0;width:min(21rem,88vw);background:var(--surface);color:var(--text);z-index:40;box-shadow:0 0 40px rgba(0,0,0,.28);transform:translateX(-108%);transition:transform .28s ease;display:flex;flex-direction:column;overflow:hidden;outline:1px solid var(--border)}
 html[dir="rtl"] .app-sidebar{transform:translateX(108%)}
 .app-sidebar.open{transform:translateX(0)!important}
 .side-head{display:flex;align-items:flex-start;gap:.75rem;padding:1rem;border-bottom:1px solid var(--border)}
@@ -237,7 +237,8 @@ html[dir="rtl"] .app-sidebar{transform:translateX(108%)}
 .side-head .who .n{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .side-head .who .s{font-size:.75rem;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .side-close{flex:none;border:1px solid var(--border);background:var(--sand);color:var(--text);border-radius:.5rem;width:2.25rem;height:2.25rem;font-size:1.1rem;line-height:1}
-.side-body{flex:1;overflow-y:auto;padding:.5rem .75rem 1rem}
+#sidebarContent{display:flex;flex-direction:column;flex:1;min-height:0}
+.side-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:.5rem .75rem 1rem}
 .side-autonote{font-size:.7rem;color:var(--dim);padding:.35rem .5rem 0}
 .side-item{display:flex;align-items:center;gap:.65rem;width:100%;border:0;background:transparent;color:var(--text);border-radius:.65rem;padding:.6rem .5rem;font-size:.95rem;font-weight:700;text-align:start}
 .side-item:hover,.side-item.on{background:var(--sand)}
@@ -1035,6 +1036,7 @@ function scheduleSidebarHide(ms){
 function openSidebar(){
   sidebarOpen=true;
   renderSidebar();
+  document.body.style.overflow="hidden";
   document.getElementById("appSidebar").classList.add("open");
   document.getElementById("appSidebar").setAttribute("aria-hidden","false");
   document.getElementById("sideOverlay").classList.add("show");
@@ -1044,6 +1046,7 @@ function openSidebar(){
 function closeSidebar(){
   sidebarOpen=false;
   clearTimeout(sidebarTimer);
+  document.body.style.overflow="";
   var sb=document.getElementById("appSidebar"); if(sb){ sb.classList.remove("open"); sb.setAttribute("aria-hidden","true"); }
   var ov=document.getElementById("sideOverlay"); if(ov) ov.classList.remove("show");
   var b=document.getElementById("btnMenu"); if(b) b.setAttribute("aria-expanded","false");
@@ -1743,9 +1746,7 @@ function renderHome(m){
     + "<label class=\"sr-only\" for=\"home-gov\">"+esc(t("governorate"))+"</label>"
     + "<select id=\"home-gov\" class=\"inp\"><option value=\"\">"+esc(t("governorate"))+": "+esc(t("allCategories"))+"</option>"
     + GOVERNORATES.map(function(g){ return "<option value=\""+esc(g)+"\""+(homeState.gov===g?" selected":"")+">"+esc(g)+"</option>"; }).join("") + "</select></div>";
-  h += "<div class=\"catrow\" role=\"group\" aria-label=\""+esc(t("allCategories"))+"\">"
-    + "<button type=\"button\" data-cat=\"\" class=\"chip"+(homeState.category===""?" on":"")+"\">"+esc(t("allCategories"))+"</button>"
-    + CATEGORIES.map(function(c){ return "<button type=\"button\" data-cat=\""+c+"\" class=\"chip"+(homeState.category===c?" on":"")+"\">"+esc(catName(c))+"</button>"; }).join("") + "</div>";
+  if(homeState.category!=="") h += "<div class=\"catrow\"><span class=\"chip on\">"+esc(catName(homeState.category))+"</span><button type=\"button\" class=\"chip\" id=\"home-cat-clear\">"+esc(t("clearBtn"))+"</button></div>";
   if(priceRangeState.min!=="" || priceRangeState.max!=="") h += "<div class=\"catrow\"><span class=\"chip on\">"+esc(t("priceRangeActive"))+": "+esc(priceRangeState.min||"0")+" – "+esc(priceRangeState.max||"∞")+" π"+"</span><button type=\"button\" class=\"chip\" id=\"home-price-clear\">"+esc(t("clearBtn"))+"</button></div>";
   if(list.length===0) h += "<p class=\"emptybox\">"+esc(t("noListings"))+"</p>";
   if(picked.length>0) h += "<section class=\"rail\"><h2 class=\"navy-text\">"+esc(t("pickedForYou"))+"</h2><div class=\"pgrid\">"+picked.map(listingCardHTML).join("")+"</div></section>";
@@ -1754,7 +1755,7 @@ function renderHome(m){
   wireCardActions(m); refreshCardActions(m);
   var pc=m.querySelector("#home-price-clear"); if(pc) pc.addEventListener("click", function(){ priceRangeState={min:"",max:""}; renderSidebar(); renderHome(m); });
   m.querySelectorAll("[data-cond]").forEach(function(b){ b.addEventListener("click", function(){ homeState.condition=b.getAttribute("data-cond"); renderHome(m); }); });
-  m.querySelectorAll("[data-cat]").forEach(function(b){ b.addEventListener("click", function(){ var c=b.getAttribute("data-cat"); homeState.category = (c===homeState.category) ? "" : c; renderHome(m); }); });
+  var cc=m.querySelector("#home-cat-clear"); if(cc) cc.addEventListener("click", function(){ homeState.category=""; renderSidebar(); renderHome(m); });
   var si=m.querySelector("#home-search");
   si.addEventListener("input", function(){ homeState.search=si.value; var pos=si.selectionStart; renderHome(m); var n=document.querySelector("#home-search"); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} });
   m.querySelector("#home-gov").addEventListener("change", function(){ homeState.gov=this.value; renderHome(m); });
@@ -3787,7 +3788,7 @@ renderHome = function(m){
     var leaveImgMode=function(e){
       if(!homeState.imgMatchIds) return;
       var tg=e.target;
-      if(tg && tg.closest && (tg.closest("[data-cond],[data-cat]") || tg.id==="home-search" || tg.id==="home-gov")) homeState.imgMatchIds=null;
+      if(tg && tg.closest && (tg.closest("[data-cond]") || tg.id==="home-cat-clear" || tg.id==="home-search" || tg.id==="home-gov")) homeState.imgMatchIds=null;
     };
     m.addEventListener("click", leaveImgMode, true);
     m.addEventListener("input", leaveImgMode, true);
