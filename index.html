@@ -249,6 +249,12 @@ html[dir="rtl"] .app-sidebar{transform:translateX(108%)}
 .side-sec{margin-top:.9rem;border-top:1px solid var(--border);padding-top:.7rem}
 .side-sec h3{margin:0 .5rem .45rem;font-size:.75rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
 .side-cats{display:flex;flex-wrap:wrap;gap:.4rem;padding:0 .25rem}
+.side-maincat{width:100%}
+.side-mainrow{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;border-radius:.75rem;padding:.6rem .75rem;font-size:.95rem;font-weight:700;background:var(--sand);color:var(--text);text-align:start;margin-bottom:.35rem}
+.side-mainrow.on{background:var(--accent);color:#fff}
+.side-chev{font-size:1rem;line-height:1}
+.side-subcats{display:flex;flex-wrap:wrap;gap:.4rem;padding:0 .25rem .5rem 1rem}
+.side-subcats .chip.sub{font-size:.8rem;padding:.3rem .6rem}
 .side-price{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;padding:0 .25rem}
 .side-price label{font-size:.72rem;font-weight:700;color:var(--dim);display:block}
 .side-price .inp{padding:.4rem .55rem;border-radius:.55rem;margin-top:.2rem}
@@ -542,6 +548,19 @@ select.inp{appearance:auto}
 "use strict";
 /* ================= REFERENCE DATA (identical to jiro-2) ================= */
 var CATEGORIES = ["electronics","fashion","computers","home","kindle","audible","phones","office","tvs","women-fashion","men-fashion","kids-fashion","beauty","supermarket","furniture","kitchen","toys","sports","books","games","car"];
+/* Nested categories: 6 main categories, each with its subcategories (leaf keys from CATEGORIES). */
+var MAIN_CATS = [
+  {key:"electronics_main", subs:["electronics","computers","phones","tvs","office"]},
+  {key:"home_main", subs:["home","furniture","kitchen","supermarket"]},
+  {key:"fashion_main", subs:["fashion","women-fashion","men-fashion","kids-fashion","beauty"]},
+  {key:"media_main", subs:["books","kindle","audible"]},
+  {key:"play_main", subs:["toys","sports","games"]},
+  {key:"auto_main", subs:["car"]}
+];
+var openMainCat = "";
+function mainCatOf(leaf){ for(var i=0;i<MAIN_CATS.length;i++){ if(MAIN_CATS[i].subs.indexOf(leaf)>=0) return MAIN_CATS[i].key; } return ""; }
+function catLeaves(cat){ for(var i=0;i<MAIN_CATS.length;i++){ if(MAIN_CATS[i].key===cat) return MAIN_CATS[i].subs.slice(); } return [cat]; }
+function catLabel(cat){ if(!cat) return ""; var m=mainCatOf(cat); return m ? catName(m)+" \u203a "+catName(cat) : catName(cat); }
 var GOVERNORATES = ["Cairo","Giza","Alexandria","Dakahlia","Red Sea","Beheira","Fayoum","Gharbiya","Ismailia","Menofia","Minya","Qaliubiya","New Valley","Suez","Aswan","Assiut","Beni Suef","Port Said","Damietta","Sharkia","South Sinai","Kafr El Sheikh","Matrouh","Luxor","Qena","North Sinai","Sohag"];
 var LANGUAGES = [
   {code:"en",label:"English",native:"English",rtl:false},{code:"zh",label:"Chinese",native:"中文",rtl:false},
@@ -646,8 +665,8 @@ en:{signIn:"Sign in with Pi",signOut:"Sign out",signedInAs:"Signed in with Pi as
 ar:{signIn:"تسجيل الدخول بـ Pi",signOut:"تسجيل الخروج",signedInAs:"تم تسجيل الدخول بـ Pi باسم",signUp:"إنشاء حساب",welcome:"أهلاً بك في جيرو",tagline:"اشترِ وبِع بحماية الضمان — فلوسك محجوزة لحد ما تأكّد الاستلام.",chooseLanguage:"اللغة",yourName:"اسمك",piUsername:"اسم مستخدم Pi",interestsTitle:"إيه اهتماماتك؟",interestsHint:"اختار اهتماماتك علشان المنتجات والإعلانات توصلك على قدّك بالظبط.",country:"البلد",governorate:"المحافظة / المدينة",continueBtn:"متابعة",home:"الرئيسية",used:"مستعمل",new:"جديد",sell:"بيع",calculator:"حاسبة العمولة",orders:"طلباتي",chat:"المحادثة",disputes:"النزاعات",admin:"الإدارة",search:"ابحث عن منتجات…",allCategories:"كل التصنيفات",pickedForYou:"مختار حسب اهتماماتك",allListings:"كل المنتجات",noListings:"لا توجد منتجات مطابقة بعد. جرّب تصنيفًا آخر أو اعرض أول منتج.",sellerPrice:"سعر البائع",shownPrice:"السعر الظاهر للمشتري",commissionNote:"شامل عمولة المنصة 5% المضافة تلقائيًا.",condition:"الحالة",defects:"العيوب والتلفيات التي أعلنها البائع",noDefects:"لا توجد عيوب مُعلنة.",description:"الوصف",seller:"البائع",location:"المكان",hasVideo:"يوجد فيديو من البائع للمنتج وعيوبه",hasDiagnostic:"مرفق لقطة من صفحة الفحص الذاتي / التشخيص",buyNow:"اشترِ بضمان Pi",messageSeller:"راسل البائع",checkout:"إتمام الشراء",itemPrice:"سعر المنتج (شامل عمولة المنصة 5%)",buyerFee:"عمولة التطبيق (5% على المشتري)",shipping:"الشحن (يدفعه المشتري)",tax:"الضريبة (إن وجدت)",total:"الإجمالي",totalPi:"الإجمالي بـ Pi",payWithPi:"ادفع بـ Pi",paying:"جارٍ تنفيذ دفع Pi…",payStep1:"Pi.createPayment — تم إنشاء الدفع",payStep2:"موافقة الخادم — وافق خادم جيرو",payStep3:"إتمام الخادم — تم الإتمام على بلوكتشين Pi",payDone:"اكتمل الدفع. عملات Pi محجوزة في الضمان.",payFailed:"لم يكتمل الدفع — لم يتم خصم شيء ولم يُنشأ أي طلب.",escrowHeld:"محجوز في الضمان",orderStatus:"حالة الطلب",tracking:"تتبع الشحن",stagePaid:"مدفوع — في الضمان",stageShipped:"تم الشحن",stageTransit:"في الطريق",stageDelivered:"تم التسليم",simulateShipping:"محاكاة تحديث شركة الشحن (تجريبي)",inspectionLeft:"الوقت المتبقي للفحص",days:"يوم",hours:"ساعة",autoReleaseAt:"التحرير التلقائي للبائع في",confirmReceipt:"تأكيد الاستلام — تحرير الفلوس",confirmHint:"أكّد فقط بعد مقارنة المنتج بوصف البائع وصوره وفيديوهاته. التحرير يحتاج أيضًا مسح التسليم من شركة الشحن — الاثنان معًا.",openDispute:"طلب استرداد — فتح نزاع",disputeHint:"النزاع يجمّد الفلوس. صوّر كل اختلاف عن وصف البائع واشرحه بالأسفل. محكّمو المنصة (وظيفتهم الوحيدة، بحياد تام) يقررون خلال 72 ساعة / 3 أيام عمل، ويجوز لهم طلب بيانات إضافية منك أو من البائع. القرار نهائي وملزم للمشتري والبائع بالشروط المعلنة.",disputeReason:"ما المشكلة في المنتج؟",disputeEvidence:"الاختلافات التي وجدتها (صِف الصور التي التقطتها)",submitDispute:"فتح النزاع وتجميد الفلوس",released:"تم التحرير للبائع",refunded:"تم الاسترداد للمشتري",disputedState:"مجمّد — نزاع مفتوح",sellTitle:"اعرض منتجًا للبيع",fTitle:"اسم المنتج",fCategory:"التصنيف",fCondition:"الحالة",fPrice:"سعرك (π) — لا حد أدنى ولا حد أقصى",fPriceHint:"المشتري يرى سعرك + 5% عمولة المنصة، ويدفع 5% إضافية فوق ذلك.",fGovernorate:"المحافظة",fCity:"المدينة / الحي",fDescription:"وصف كامل للمنتج وحالته",fDefects:"كل العيوب أو التلفيات أو ما يحتاج إصلاحًا أو تغييرًا",fVideo:"أقدم فيديو للمنتج وحالته وعيوبه",fDiagnostic:"أرفق لقطة من صفحة الفحص الذاتي (للموبايلات والأجهزة)",fDiagnosticNote:"ملاحظة الفحص (مثال: صحة البطارية)",fPhoto:"صورة المنتج",publish:"نشر المنتج",published:"تم نشر منتجك.",calcTitle:"حاسبة العمولة",calcHint:"5% ثابتة + 5% — الجدول المتدرج القديم لم يعد مطبقًا.",calcSellerGets:"يستلم البائع",calcBuyerPays:"يدفع المشتري مقابل المنتج",send:"إرسال",typeMessage:"اكتب رسالة…",asBuyer:"تكتب بصفتك المشتري",asSeller:"تكتب بصفتك البائع",noMessages:"لا رسائل بعد — ابدأ المحادثة.",selectListingChat:"اختر منتجًا لفتح محادثته",adminTitle:"لوحة الإدارة / الدعم",statListings:"المنتجات",statOrders:"الطلبات",statHeld:"قيمة المحجوز في الضمان (π)",statReleased:"تم تحريره (π)",statRefunded:"تم استرداده (π)",statOpenDisputes:"نزاعات مفتوحة",interestStats:"اهتمامات العملاء المسجلة (استهداف الإعلانات)",arbitrationQueue:"قائمة التحكيم",decideBuyer:"الحكم للمشتري (استرداد)",decideSeller:"الحكم للبائع (تحرير)",requestInfo:"طلب بيانات إضافية",decisionNote:"ملاحظة القرار / الطلب",disputeDeadline:"آخر موعد للقرار",statusOpen:"مفتوح",statusNeedsInfo:"بانتظار بيانات إضافية",statusBuyerWon:"حُكم للمشتري",statusSellerWon:"حُكم للبائع",noDisputes:"لا توجد نزاعات.",noOrders:"لا توجد طلبات بعد.",piPanel:"تكامل Pi (متطلبات الفريق الأساسي)",piPanelBody:"نسخة Staging / Testnet. النسخة الثابتة العامة دي بتحمّل Pi JS SDK وبتنفّذ Pi.init({ version: \"2.0\", sandbox: true }) وبتسجّل الدخول بـ Pi.authenticate (صلاحيات username وpayments وwallet_address) — من غير أي اتصال بخادم خالص: مش بتقدر تتحقق من هوية Pi عند خادم، واعتماد الدفع وإتمامه بيتموا على الخادم في النسخة الكاملة بس (jiro-2). العمولة ثابتة 5% + 5%.",egp:"π",back:"رجوع",saveError:"من فضلك املأ الحقول المطلوبة."}
 };
 var CATEGORY_STRINGS = {
-en:{electronics:"Electronics",fashion:"Fashion",computers:"Computers",home:"Home products",kindle:"E-readers & e-books",audible:"Audiobooks & listening",phones:"Mobile phones, tablets & accessories",office:"Computers & office supplies",tvs:"TVs & electronics","women-fashion":"Women's fashion","men-fashion":"Men's fashion","kids-fashion":"Children's fashion",beauty:"Perfumes & beauty",supermarket:"Supermarket",furniture:"Home, furniture & tools",kitchen:"Kitchen & home appliances",toys:"Toys & children's products",sports:"Sports, fitness & outdoor",books:"Books",games:"Video games",car:"Car accessories"},
-ar:{electronics:"الإلكترونيات",fashion:"أزياء",computers:"أجهزة الكمبيوتر",home:"منتجات المنزل",kindle:"قارئات إلكترونية وكتب إلكترونية",audible:"كتب وإصدارات صوتية",phones:"الهواتف المحمولة والأجهزة اللوحية والإكسسوارات",office:"أجهزة الكمبيوتر والمستلزمات المكتبية",tvs:"أجهزة التلفزيون والإلكترونيات","women-fashion":"الأزياء النسائية","men-fashion":"أزياء رجالية","kids-fashion":"أزياء الأطفال",beauty:"العطور والجمال",supermarket:"السوبر ماركت",furniture:"المنزل والأثاث والأدوات",kitchen:"المطبخ والأجهزة المنزلية",toys:"الألعاب ومنتجات الأطفال",sports:"مستلزمات الرياضة واللياقة البدنية والأنشطة الخارجية",books:"الكتب",games:"ألعاب الفيديو",car:"مستلزمات السيارات"}
+en:{electronics:"Electronics",fashion:"Fashion",computers:"Computers",home:"Home products",kindle:"E-readers & e-books",audible:"Audiobooks & listening",phones:"Mobile phones, tablets & accessories",office:"Computers & office supplies",tvs:"TVs & electronics","women-fashion":"Women's fashion","men-fashion":"Men's fashion","kids-fashion":"Children's fashion",beauty:"Perfumes & beauty",supermarket:"Supermarket",furniture:"Home, furniture & tools",kitchen:"Kitchen & home appliances",toys:"Toys & children's products",sports:"Sports, fitness & outdoor",books:"Books",games:"Video games",car:"Car accessories",electronics_main:"Electronics & Devices",home_main:"Home & Kitchen",fashion_main:"Fashion & Beauty",media_main:"Books & Media",play_main:"Toys, Sports & Games",auto_main:"Cars & Accessories"},
+ar:{electronics:"الإلكترونيات",fashion:"أزياء",computers:"أجهزة الكمبيوتر",home:"منتجات المنزل",kindle:"قارئات إلكترونية وكتب إلكترونية",audible:"كتب وإصدارات صوتية",phones:"الهواتف المحمولة والأجهزة اللوحية والإكسسوارات",office:"أجهزة الكمبيوتر والمستلزمات المكتبية",tvs:"أجهزة التلفزيون والإلكترونيات","women-fashion":"الأزياء النسائية","men-fashion":"أزياء رجالية","kids-fashion":"أزياء الأطفال",beauty:"العطور والجمال",supermarket:"السوبر ماركت",furniture:"المنزل والأثاث والأدوات",kitchen:"المطبخ والأجهزة المنزلية",toys:"الألعاب ومنتجات الأطفال",sports:"مستلزمات الرياضة واللياقة البدنية والأنشطة الخارجية",books:"الكتب",games:"ألعاب الفيديو",car:"مستلزمات السيارات",electronics_main:"إلكترونيات وأجهزة",home_main:"أدوات المنزل والمطبخ",fashion_main:"أزياء وجمال",media_main:"كتب ووسائط",play_main:"ألعاب ورياضة",auto_main:"سيارات وإكسسوارات"}
 };
 </script>
 <script>
@@ -1165,9 +1184,19 @@ function renderSidebar(){
   /* — Categories panel — */
   var catsPanel = "<div class=\"side-cats\" style=\"padding:0\">"
     + "<button type=\"button\" class=\"chip"+(homeState.category===""?" on":"")+"\" data-sidecat=\"\">"+esc(t("allCategories"))+"</button>"
-    + CATEGORIES.map(function(c){ return "<button type=\"button\" class=\"chip"+(homeState.category===c?" on":"")+"\" data-sidecat=\""+c+"\">"+esc(catName(c))+"</button>"; }).join("") + "</div>";
-
-  /* — Price range panel: min / max + quick ranges — */
+    + MAIN_CATS.map(function(m){
+        var isOpen = openMainCat===m.key || (homeState.category && (homeState.category===m.key || m.subs.indexOf(homeState.category)>=0));
+        var active = homeState.category===m.key || (homeState.category && m.subs.indexOf(homeState.category)>=0);
+        var h = "<div class=\"side-maincat\"><button type=\"button\" class=\"side-mainrow"+(active?" on":"")+"\" data-maincat=\""+m.key+"\">"
+          + "<span>"+esc(catName(m.key))+"</span><span class=\"side-chev\">"+(isOpen?"▾":"▸")+"</span></button>";
+        if(isOpen){
+          h += "<div class=\"side-subcats\">" + m.subs.map(function(c){
+            return "<button type=\"button\" class=\"chip sub"+(homeState.category===c?" on":"")+"\" data-sidecat=\""+c+"\">"+esc(catName(c))+"</button>";
+          }).join("") + "</div>";
+        }
+        return h + "</div>";
+      }).join("") + "</div>";
+/* — Price range panel: min / max + quick ranges — */
   var pricePanel =
       "<div class=\"side-price\" style=\"padding:0\">"
     + "<div><label for=\"side-min\">"+esc(t("minPrice"))+"</label><input id=\"side-min\" class=\"inp\" type=\"text\" inputmode=\"decimal\" min=\"0\" value=\""+esc(priceRangeState.min)+"\"/></div>"
@@ -1292,6 +1321,7 @@ function renderSidebar(){
   var pl=box.querySelector("#sb-pref-lang"); if(pl) pl.addEventListener("change", function(){ applyLang(this.value); });
   var sl=box.querySelector("#sb-set-lang"); if(sl) sl.addEventListener("change", function(){ applyLang(this.value); });
   box.querySelectorAll("[data-sidecat]").forEach(function(b){ b.addEventListener("click", function(){ homeState.category=b.getAttribute("data-sidecat")||""; closeSidebar(); setView({name:"home"}); }); });
+  box.querySelectorAll("[data-maincat]").forEach(function(b){ b.addEventListener("click", function(){ var k=b.getAttribute("data-maincat"); openMainCat=(openMainCat===k)?"":k; homeState.category=k; renderSidebar(); }); });
   var pa=box.querySelector("#sidePriceApply"); if(pa) pa.addEventListener("click", function(){
     priceRangeState.min=box.querySelector("#side-min").value; priceRangeState.max=box.querySelector("#side-max").value;
     closeSidebar(); setView({name:"home"});
@@ -1682,7 +1712,7 @@ function filteredListings(){
     if(l.reviewStatus==="pending" || l.reviewStatus==="rejected") return false; /* pre-publication review */
     if(l.expiresAt && l.expiresAt<now) return false; /* expired listings drop out of results */
     if(l.condition!==homeState.condition) return false;
-    if(homeState.category && l.category!==homeState.category) return false;
+    if(homeState.category && catLeaves(homeState.category).indexOf(l.category)<0) return false;
     if(homeState.gov && l.governorate!==homeState.gov) return false;
     var dp=displayPriceOf(l);
     if(priceRangeState.min!=="" && priceRangeState.min!=null && dp < Number(priceRangeState.min)) return false;
@@ -1723,7 +1753,7 @@ function renderHome(m){
     + "<label class=\"sr-only\" for=\"home-gov\">"+esc(t("governorate"))+"</label>"
     + "<select id=\"home-gov\" class=\"inp\"><option value=\"\">"+esc(t("governorate"))+": "+esc(t("allCategories"))+"</option>"
     + GOVERNORATES.map(function(g){ return "<option value=\""+esc(g)+"\""+(homeState.gov===g?" selected":"")+">"+esc(g)+"</option>"; }).join("") + "</select></div>";
-  if(homeState.category!=="") h += "<div class=\"catrow\"><span class=\"chip on\">"+esc(catName(homeState.category))+"</span><button type=\"button\" class=\"chip\" id=\"home-cat-clear\">"+esc(t("clearBtn"))+"</button></div>";
+  if(homeState.category!=="") h += "<div class=\"catrow\"><span class=\"chip on\">"+esc(catLabel(homeState.category))+"</span><button type=\"button\" class=\"chip\" id=\"home-cat-clear\">"+esc(t("clearBtn"))+"</button></div>";
   if(priceRangeState.min!=="" || priceRangeState.max!=="") h += "<div class=\"catrow\"><span class=\"chip on\">"+esc(t("priceRangeActive"))+": "+esc(priceRangeState.min||"0")+" – "+esc(priceRangeState.max||"∞")+" π"+"</span><button type=\"button\" class=\"chip\" id=\"home-price-clear\">"+esc(t("clearBtn"))+"</button></div>";
   if(list.length===0) h += "<p class=\"emptybox\">"+esc(t("noListings"))+"</p>";
   if(picked.length>0) h += "<section class=\"rail\"><h2 class=\"navy-text\">"+esc(t("pickedForYou"))+"</h2><div class=\"pgrid\">"+picked.map(listingCardHTML).join("")+"</div></section>";
