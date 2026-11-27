@@ -45,6 +45,37 @@ function getPi() {
   return new PiNetwork(apiKey, seed);
 }
 
+// Pi allows only ONE ongoing payment per app: if an earlier press created a
+// payment but never completed it (e.g. submit failed), every later
+// createPayment fails with ongoing_payment_found. This resumes that stuck
+// payment (submit + complete) so it pays its rightful recipient, instead of
+// failing forever. Throws a detailed error (with the stuck payment's
+// identifier, from_address, recipient uid and the resume failure) when it
+// cannot resume — e.g. "You should use a private seed of your app wallet!"
+// proves the seed belongs to a different wallet than the app's.
+async function resumeIncompletePayment(pi) {
+  const list = await pi.getIncompleteServerPayments();
+  const arr = Array.isArray(list) ? list : ((list && (list.incomplete_server_payments || list.payments)) || []);
+  if (!arr.length) throw new Error('ongoing_payment_found but Pi lists no incomplete payments');
+  const p = arr[0];
+  let txid = null;
+  try {
+    txid = await pi.submitPayment(p.identifier);
+  } catch (e) {
+    const m = String((e && e.message) || '');
+    if (m.indexOf('already has a linked txid') !== -1) {
+      try { txid = JSON.parse(m).txid; } catch (_) {}
+    }
+    if (!txid) {
+      throw new Error('cannot resume stuck payment ' + p.identifier + ' from ' + p.from_address + ' to uid ' + p.user_uid + ' amount ' + p.amount + ' created ' + p.created_at + ': ' + m);
+    }
+  }
+  const completed = await pi.completePayment(p.identifier, txid);
+  const st = (completed && completed.status) || {};
+  if (!st.transaction_verified || !st.developer_completed) throw new Error('stuck payment ' + p.identifier + ' completed but not verified');
+  return { payment: p, txid };
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return lib.genericError(res, 405, 'method_not_allowed');
@@ -158,12 +189,34 @@ module.exports = async (req, res) => {
         var payoutMeta = { kind: kind };
         if (orderId) payoutMeta.orderId = orderId;
         if (body.origPaymentId) payoutMeta.origPaymentId = body.origPaymentId;
-        paymentId = await pi.createPayment({
-          amount,
-          memo,
-          metadata: payoutMeta,
-          uid,
-        });
+        try {
+          paymentId = await pi.createPayment({
+            amount,
+            memo,
+            metadata: payoutMeta,
+            uid,
+          });
+        } catch (createErr) {
+          const respData = createErr && createErr.response && createErr.response.data;
+          if (!respData || respData.error !== 'ongoing_payment_found') throw createErr;
+          // One stuck payment from an earlier press blocks every new create.
+          // Resume it: it pays its rightful recipient. Then this row either
+          // IS paid (stuck payment was for this uid) or creates a fresh
+          // payment now that the block is cleared.
+          const resumed = await resumeIncompletePayment(pi);
+          const rMemo = resumed.payment.memo || memo;
+          const rKey = 'a2u:a2u:' + resumed.payment.user_uid + ':' + String(resumed.payment.amount) + ':' + String(rMemo);
+          lib.releaseRegistry.set(rKey, { state: 'done', paymentId: resumed.payment.identifier, txid: resumed.txid, result: { kind, orderId: orderId || null, paymentId: resumed.payment.identifier, txid: resumed.txid, amount: resumed.payment.amount, uid: resumed.payment.user_uid, memo: rMemo } });
+          if (resumed.payment.user_uid === uid) {
+            return { kind, orderId: orderId || null, paymentId: resumed.payment.identifier, txid: resumed.txid, amount: resumed.payment.amount, uid, memo: rMemo };
+          }
+          paymentId = await pi.createPayment({
+            amount,
+            memo,
+            metadata: payoutMeta,
+            uid,
+          });
+        }
         lib.releaseRegistry.set(key, { state: 'created', paymentId });
       }
       let txid = entry && entry.txid ? entry.txid : null;
@@ -208,7 +261,9 @@ module.exports = async (req, res) => {
       if (respStatus) detail = 'HTTP ' + respStatus + ': ' + detail;
     } catch (e) {}
     if (!detail) detail = String((err && err.message) || err || 'payout_failed');
-    detail = detail.slice(0, 300);
+    // Keep the full Pi error body: it carries the ongoing payment's
+    // identifier + from_address, which the admin needs to unblock it.
+    detail = detail.slice(0, 1500);
     try { console.error('release payout error:', detail); } catch (e) {}
     return res.status(502).json({ error: 'payout_failed', detail: detail });
   }
