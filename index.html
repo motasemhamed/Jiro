@@ -4823,6 +4823,9 @@ var SPEC_BRANDS=[["iphone","Apple"],["samsung","Samsung"],["galaxy","Samsung"],[
 var SPEC_COLOR_WORDS=["black","white","silver","gold","blue","red","green","brown","grey","beige","pink","amber"];
 var SPEC_COLORS_LIST=["Black","White","Silver","Gold","Blue","Red","Green","Brown","Grey","Beige","Pink","Amber","Other"];
 var SPEC_DEVICE_CATS=["phones","computers","tvs","electronics","office","games","kindle","kitchen","home","car"];
+var SPEC_BRANDS_BY_CAT={"phones":["Apple","Samsung","Xiaomi","Oppo","Huawei","Sony","Google","OnePlus","Vivo","Realme","Nokia"],"computers":["HP","Dell","Lenovo","Apple","ASUS","Acer","MSI","Microsoft"],"tvs":["Samsung","LG","Sony","Hisense","Toshiba","TCL","Philips"],"electronics":["Samsung","Sony","LG","JBL","Philips","Bosch","Xiaomi"],"office":["HP","Canon","Epson","Logitech","Dell"],"games":["Sony","Microsoft","Nintendo","Logitech","Razer"],"kindle":["Amazon","Kobo"],"audible":["Amazon"],"books":["Penguin","HarperCollins","Simon & Schuster"],"home":["IKEA","Bosch","Philips","Samsung","LG"],"furniture":["IKEA","Ashley","La-Z-Boy"],"kitchen":["Bosch","Philips","Tefal","Kenwood","Braun"],"supermarket":["Nestlé","Unilever","Procter & Gamble"],"fashion":["Nike","Adidas","Zara","H&M","Puma","Levi's"],"women-fashion":["Zara","H&M","Nike","Adidas","Mango"],"men-fashion":["Nike","Adidas","Levi's","Zara","Puma"],"kids-fashion":["Nike","Adidas","Carter's","H&M"],"beauty":["L'Oréal","Maybelline","Nivea","MAC"],"toys":["LEGO","Mattel","Hasbro","Fisher-Price","Nerf","Hot Wheels"],"sports":["Nike","Adidas","Puma","Reebok","Decathlon"],"car":["Toyota","Honda","BMW","Mercedes-Benz","Hyundai","Kia"]};
+function brandsForCat(cat){ return SPEC_BRANDS_BY_CAT[cat] || ["Apple","Samsung","Sony","LG","HP","Nike"]; }
+function brandOptionsHTML(cat){ return brandsForCat(cat).map(function(b){ return "<option value=\""+esc(b)+"\"></option>"; }).join(""); }
 function cap1(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
 function deriveSpecs(l){
   /* G9: a listing that already carries seller-entered specs keeps them — the
@@ -4857,9 +4860,10 @@ renderSell = function(m){
   var snapIds=listings.map(function(l){ return l.id; });
   var snapDraftMax=drafts.reduce(function(mx,d){ return Math.max(mx,d.id); },0);
   var errEl=m.querySelector("#sell-error");
+  var catSel=m.querySelector("#sell-cat");
   var specHTML="<div><label class=\"fl\" for=\"sp-brand\">"+esc(t("yBrand"))+" <span id=\"sp-brand-star\" style=\"color:var(--danger)\"></span></label>"
     + "<input id=\"sp-brand\" class=\"inp\" type=\"text\" list=\"sp-brand-list\" placeholder=\""+esc(t("yBrandPh"))+"\"/><datalist id=\"sp-brand-list\">"
-    + ["Apple","Samsung","Xiaomi","Oppo","Huawei","Sony","LG","HP","Dell","Lenovo","Nike","Adidas","Bosch","Toshiba","Hisense","Amazon"].map(function(b){ return "<option value=\""+b+"\"></option>"; }).join("")+"</datalist>"
+    + brandOptionsHTML(catSel.value)+"</datalist>"
     + "<p class=\"hint\" id=\"sp-brand-hint\" style=\"display:none\">"+esc(t("yBrandRequired"))+"</p></div>"
     + "<div class=\"grid2\" style=\"grid-template-columns:1fr 1fr\">"
     + "<div><label class=\"fl\" for=\"sp-model\">"+esc(t("yModel"))+"</label><input id=\"sp-model\" class=\"inp\" type=\"text\" placeholder=\""+esc(t("yModelPh"))+"\"/></div>"
@@ -4867,12 +4871,12 @@ renderSell = function(m){
     + "<div><label class=\"fl\" for=\"sp-color\">"+esc(t("yColor"))+"</label><select id=\"sp-color\" class=\"inp\"><option value=\"\">—</option>"
     + SPEC_COLORS_LIST.map(function(c){ return "<option value=\""+c+"\">"+esc(t("yCol"+c)||c)+"</option>"; }).join("")+"</select></div>";
   if(errEl) errEl.insertAdjacentHTML("beforebegin", specHTML);
-  var catSel=m.querySelector("#sell-cat");
   function readSpecs(){ return {brand:m.querySelector("#sp-brand").value.trim(), model:m.querySelector("#sp-model").value.trim(), capacity:m.querySelector("#sp-capacity").value.trim(), color:m.querySelector("#sp-color").value}; }
   function refreshBrandReq(){
     var dev=SPEC_DEVICE_CATS.indexOf(catSel.value)>=0;
     m.querySelector("#sp-brand-star").textContent = dev ? "*" : "";
     m.querySelector("#sp-brand-hint").style.display = dev ? "block" : "none";
+    var dl=m.querySelector("#sp-brand-list"); if(dl) dl.innerHTML=brandOptionsHTML(catSel.value);
   }
   catSel.addEventListener("change", refreshBrandReq);
   refreshBrandReq();
