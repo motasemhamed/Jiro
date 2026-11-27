@@ -36,6 +36,11 @@ module.exports = async (req, res) => {
     if (!paymentId || typeof paymentId !== 'string' || !txid || typeof txid !== 'string') {
       return lib.genericError(res, 400, 'missing_payment_id_or_txid');
     }
+    // F1: a completion without an order payload cannot have its amount
+    // verified — see approve.js.
+    if (!body.order || typeof body.order !== 'object') {
+      return lib.genericError(res, 400, 'missing_order');
+    }
 
     // B10: replay returns the stored record, no second completion.
     const stored = lib.completedPayments.get(paymentId);
