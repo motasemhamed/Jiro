@@ -188,6 +188,12 @@ module.exports = async (req, res) => {
   } catch (err) {
     // A created-but-unfinished payment stays in the registry under its key;
     // retrying with the same key resumes it. Never retry with a new key.
-    return lib.genericError(res, 502, 'payout_failed');
+    // Surface the underlying reason (Pi API / pi-backend / Horizon message,
+    // e.g. "You should use a private seed of your app wallet!") so the
+    // admin can see WHY it failed instead of a bare code. The message never
+    // contains the seed. Admin-only endpoint.
+    var detail = String((err && err.message) || err || 'payout_failed').slice(0, 200);
+    try { console.error('release payout error:', detail); } catch (e) {}
+    return res.status(502).json({ error: 'payout_failed', detail: detail });
   }
 };
