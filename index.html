@@ -2981,7 +2981,7 @@ function a2uPayAll(m){
       }).catch(function(err){
         var code=(err && err.data && err.data.error)||(err && err.message)||"failed";
         rows[x.i].state="failed";
-        rows[x.i].error=(code==="payout_not_configured") ? t("a2uSeedMissing") : String(code);
+        rows[x.i].error=(code==="payout_not_configured") ? t("a2uSeedMissing") : String(code) + ((err && err.data && err.data.detail) ? " \u2014 " + String(err.data.detail) : "");
         a2uSaveRows();
         var c3=m.querySelector("#a2u-status-"+x.i); if(c3) c3.innerHTML=a2uStatusHTML(rows[x.i]);
       });
