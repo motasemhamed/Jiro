@@ -81,3 +81,24 @@ console checklist item `process_transaction` flips to true.
   platform limits apply.
 - No Mainnet: this is Testnet (Staging). Mainnet needs the Outgoing Wallet
   approval first (blocked until 5 unique-wallet A2U payments exist).
+
+## F1 (2026-11-27) — commission math + price signatures
+
+- Buyer total: the display price already includes the 5% buyer commission, so
+  the buyer pays display + shipping + tax only (a 100 Pi item: 105.6 Pi with
+  shipping). The seller receives list price x 0.95 (95 Pi). No second 5% is
+  added anywhere (frontend `breakdown()`, `expectedCartTotal`,
+  `expectedSingleTotal`, `expectedOrderTotal`).
+- Demo (seeded, ids 1-42) listings are NOT purchasable: any order for a
+  catalog id is rejected (`invalid:true` -> `payment_amount_mismatch`).
+- `POST /api/payments/sign` `{kind:"listing"|"agreed"|"bid", listingId, pricePi}`
+  + Bearer token: returns an HMAC-SHA256 signature (key `PI_API_KEY`) bound to
+  kind + listing id + display price + caller uid (`/v2/me`). The frontend
+  signs at publish / offer-accept / bid time and stores `priceSig` +
+  `priceSellerUid` on the listing/offer/bid. `approve`/`complete` verify the
+  signature and reject orders whose `sellerUid` equals the payer's uid.
+  A boost is `{boost:true, listingId, pricePi:2.5}` and must cost exactly 2.5 Pi.
+- `approve`/`complete` now reject a payment with no order payload
+  (`missing_order`): an amount that cannot be verified is never approved.
+- `release` rejects a caller-supplied recipient uid that is not a full
+  36-char UUID (`bad_recipient_uid`); the frontend `a2uPayAll` validates first.
