@@ -153,10 +153,15 @@ module.exports = async (req, res) => {
       if (entry && entry.paymentId) {
         paymentId = entry.paymentId; // resume a created payment, never recreate
       } else {
+        // Metadata carries only defined values (no nulls) — keeps the request
+        // body exactly as Pi documents it.
+        var payoutMeta = { kind: kind };
+        if (orderId) payoutMeta.orderId = orderId;
+        if (body.origPaymentId) payoutMeta.origPaymentId = body.origPaymentId;
         paymentId = await pi.createPayment({
           amount,
           memo,
-          metadata: { kind, orderId: orderId || null, origPaymentId: body.origPaymentId || null },
+          metadata: payoutMeta,
           uid,
         });
         lib.releaseRegistry.set(key, { state: 'created', paymentId });
@@ -188,11 +193,22 @@ module.exports = async (req, res) => {
   } catch (err) {
     // A created-but-unfinished payment stays in the registry under its key;
     // retrying with the same key resumes it. Never retry with a new key.
-    // Surface the underlying reason (Pi API / pi-backend / Horizon message,
-    // e.g. "You should use a private seed of your app wallet!") so the
-    // admin can see WHY it failed instead of a bare code. The message never
+    // Surface the underlying reason so the admin can see WHY it failed
+    // instead of a bare code. Pi's API puts its real reason in the HTTP
+    // response body (err.response.data) — axios's message alone is only
+    // "Request failed with status code 400" and hides it. The detail never
     // contains the seed. Admin-only endpoint.
-    var detail = String((err && err.message) || err || 'payout_failed').slice(0, 200);
+    var detail = '';
+    try {
+      var respData = err && err.response && err.response.data;
+      if (respData) {
+        detail = (typeof respData === 'string') ? respData : JSON.stringify(respData);
+      }
+      var respStatus = err && err.response && err.response.status;
+      if (respStatus) detail = 'HTTP ' + respStatus + ': ' + detail;
+    } catch (e) {}
+    if (!detail) detail = String((err && err.message) || err || 'payout_failed');
+    detail = detail.slice(0, 300);
     try { console.error('release payout error:', detail); } catch (e) {}
     return res.status(502).json({ error: 'payout_failed', detail: detail });
   }
