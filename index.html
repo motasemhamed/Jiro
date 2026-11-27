@@ -2957,6 +2957,10 @@ function admA2uHTML(){
    lost by a re-render. */
 function a2uPayAll(m){
   var rows=a2uGetRows();
+  /* Re-read the live inputs: a typed value must count even if an input event was missed. */
+  m.querySelectorAll("[data-a2u-uid]").forEach(function(inp){ var i=Number(inp.getAttribute("data-a2u-uid")); if(rows[i]) rows[i].uid=inp.value.trim(); });
+  m.querySelectorAll("[data-a2u-name]").forEach(function(inp){ var i=Number(inp.getAttribute("data-a2u-name")); if(rows[i]) rows[i].name=inp.value; });
+  a2uSaveRows();
   var targets=[];
   rows.forEach(function(r,i){ var u=(r.uid||"").trim(); if(u) targets.push({i:i, uid:u}); });
   if(!targets.length){ toast(t("a2uNoUid")); return; }
@@ -3180,6 +3184,12 @@ function wireAdmin(m){
   }); });
   /* Log filters */
   m.querySelectorAll("[data-logfilter]").forEach(function(b){ b.addEventListener("click", function(){ logFilterType=b.getAttribute("data-logfilter"); renderAdmin(m); }); });
+  /* A2U payouts — inputs persist to localStorage as typed; the pay button runs the 5 payouts sequentially */
+  m.querySelectorAll("[data-a2u-name]").forEach(function(inp){ inp.addEventListener("input", function(){ var i=Number(inp.getAttribute("data-a2u-name")); a2uGetRows()[i].name=inp.value; a2uSaveRows(); }); });
+  m.querySelectorAll("[data-a2u-uid]").forEach(function(inp){ inp.addEventListener("input", function(){ var i=Number(inp.getAttribute("data-a2u-uid")); a2uGetRows()[i].uid=inp.value.trim(); a2uSaveRows(); }); });
+  m.querySelectorAll("[data-a2u-clear]").forEach(function(b){ b.addEventListener("click", function(){ var i=Number(b.getAttribute("data-a2u-clear")); var rows=a2uGetRows(); rows[i]={name:"", uid:"", state:"", paymentId:null, txid:null, error:null, at:null}; a2uSaveRows(); renderAdmin(m); }); });
+  var a2uBtn=m.querySelector("#a2u-pay");
+  if(a2uBtn) a2uBtn.addEventListener("click", function(){ a2uPayAll(m); });
 }
 
 /* ================= SIDEBAR VIEWS ================= */
@@ -3189,12 +3199,7 @@ function renderIdList(m, ids, title, emptyMsg){
   if(items.length===0) h += "<p class=\"emptybox\">"+esc(emptyMsg)+"</p>";
   else h += "<div class=\"pgrid\" style=\"margin-top:1rem\">"+items.map(listingCardHTML).join("")+"</div>";
   m.innerHTML=h;
-  /* A2U payouts — inputs persist to localStorage as typed; the pay button runs the 5 payouts sequentially */
-  m.querySelectorAll("[data-a2u-name]").forEach(function(inp){ inp.addEventListener("input", function(){ var i=Number(inp.getAttribute("data-a2u-name")); a2uGetRows()[i].name=inp.value; a2uSaveRows(); }); });
-  m.querySelectorAll("[data-a2u-uid]").forEach(function(inp){ inp.addEventListener("input", function(){ var i=Number(inp.getAttribute("data-a2u-uid")); a2uGetRows()[i].uid=inp.value.trim(); a2uSaveRows(); }); });
-  m.querySelectorAll("[data-a2u-clear]").forEach(function(b){ b.addEventListener("click", function(){ var i=Number(b.getAttribute("data-a2u-clear")); var rows=a2uGetRows(); rows[i]={name:"", uid:"", state:"", paymentId:null, txid:null, error:null, at:null}; a2uSaveRows(); renderAdmin(m); }); });
-  var a2uBtn=m.querySelector("#a2u-pay");
-  if(a2uBtn) a2uBtn.addEventListener("click", function(){ a2uPayAll(m); });
+
   wireCardActions(m); refreshCardActions(m);
   m.querySelectorAll("[data-open]").forEach(function(b){ b.addEventListener("click", function(){ setView({name:"product", id:Number(b.getAttribute("data-open"))}); }); });
 }
