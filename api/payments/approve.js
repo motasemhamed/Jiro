@@ -35,6 +35,11 @@ module.exports = async (req, res) => {
     if (!paymentId || typeof paymentId !== 'string') {
       return lib.genericError(res, 400, 'missing_payment_id');
     }
+    // F1: a payment without an order payload cannot have its amount verified
+    // — a tampered client could otherwise omit the order and pay anything.
+    if (!body.order || typeof body.order !== 'object') {
+      return lib.genericError(res, 400, 'missing_order');
+    }
 
     // 1) Who is calling?
     const me = await lib.piGetMe(accessToken);

@@ -107,6 +107,13 @@ module.exports = async (req, res) => {
     if (kind !== 'refund' && (!uid || typeof uid !== 'string')) {
       return lib.genericError(res, 400, 'bad_payout_request');
     }
+    // F1 (skill): a recipient uid must be a full 36-char UUID. A short or
+    // mistyped uid used to reach Pi and fail there — reject it here. (A
+    // refund's uid comes from Pi's own record, not the caller, so it is
+    // exempt from this check.)
+    if (kind !== 'refund' && !lib.isValidPiUid(uid)) {
+      return lib.genericError(res, 400, 'bad_recipient_uid');
+    }
     if (!Number.isFinite(amount) || amount <= 0 || amount > 10000) {
       return lib.genericError(res, 400, 'bad_payout_amount');
     }
